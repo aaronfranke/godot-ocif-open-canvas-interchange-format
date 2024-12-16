@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://nudwseo3ywe5"]
+
+[node name="Test" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="A" type="Control" parent="." groups=["letter_named_nodes"]]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="B" type="Control" parent="A" groups=["letter_named_nodes"]]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HasAnchors" type="Control" parent="A"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_bottom = 5.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="C" type="Control" parent="." groups=["letter_named_nodes"]]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
