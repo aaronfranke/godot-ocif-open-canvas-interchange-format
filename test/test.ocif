@@ -31,19 +31,23 @@
 					"type": "@ocif/node/relative"
 				},
 				{
-					"anchors": [
-						1.0,
-						0.0,
+					"bottomRightAnchor": [
 						1.0,
 						0.5
 					],
-					"offsets": [
-						-20.0,
-						0.0,
+					"bottomRightOffset": [
 						0.0,
 						5.0
 					],
-					"type": "@godot/node/anchors"
+					"topLeftAnchor": [
+						1.0,
+						0.0
+					],
+					"topLeftOffset": [
+						-20.0,
+						0.0
+					],
+					"type": "@ocif/node/anchored"
 				}
 			],
 			"id": "HasAnchors",
@@ -102,34 +106,8 @@
 	],
 	"schemas": [
 		{
-			"name": "@godot/node/anchors",
-			"schema": {
-				"$schema": "https://json-schema.org/draft/2020-12/schema",
-				"description": "Anchor points and offsets, which determine how a node is placed and resized relative to a parent with a finite non-zero size.",
-				"properties": {
-					"anchors": {
-						"description": "The anchor points of the node, as a percentage of the parent's size. An anchor of 0.0 is relative to the parent's left or top edge, an anchor of 1.0 is relative to the parent's right or bottom edge, and an anchor of 0.5 is relative to the parent's center. Values are stored in clockwise [-X, -Y, +X, +Y] order.",
-						"items": {
-							"type": "number"
-						},
-						"maxItems": 4,
-						"minItems": 4,
-						"type": "array"
-					},
-					"offsets": {
-						"description": "The offsets from the anchor points, in logical pixels. Positive values move to the right or down. An offset of 0.0 is at the anchor point. Values are stored in clockwise [-X, -Y, +X, +Y] order.",
-						"items": {
-							"type": "number"
-						},
-						"maxItems": 4,
-						"minItems": 4,
-						"type": "array"
-					}
-				},
-				"title": "@godot/node/anchors",
-				"type": "object"
-			},
-			"uri": "TODO"
+			"name": "@ocif/node/anchored",
+			"uri": "https://spec.canvasprotocol.org/v0.6/extensions/anchored-node.json"
 		}
 	]
 }

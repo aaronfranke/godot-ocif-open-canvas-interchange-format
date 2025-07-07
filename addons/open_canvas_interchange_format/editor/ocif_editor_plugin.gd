@@ -9,7 +9,7 @@ var _file_dialog: EditorFileDialog
 func _enter_tree() -> void:
 	# Register extensions. Note: This only runs in the editor.
 	var ext: OCIFDocumentExtension
-	ext = GodotAnchorsOCIFDocumentExtension.new()
+	ext = AnchoredNodeOCIFDocumentExtension.new()
 	OCIFDocument.register_ocif_document_extension(ext)
 	if not Engine.is_editor_hint():
 		return
