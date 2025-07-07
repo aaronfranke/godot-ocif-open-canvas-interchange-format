@@ -137,8 +137,8 @@ func _import_parse_relations(ocif_state: OCIFState, ocif_json: Dictionary) -> vo
 					if parent != null and child != null:
 						parent.child_ids.append(relation_data["child"])
 						child.parent_id = relation_data["parent"]
-				elif relation_data["type"] == "@ocif/rel/set":
-					ocif_state.ocif_node_sets[ocif_relation.id] = relation_data["members"]
+				elif relation_data["type"] == "@ocif/rel/group":
+					ocif_state.ocif_node_groups[ocif_relation.id] = relation_data["members"]
 		# Run import parse relations for extensions.
 		for ext in _active_ocif_document_extensions:
 			ext.import_parse_ocif_relation(ocif_state, ocif_relation)
@@ -154,11 +154,11 @@ func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, sce
 	if current_node == null:
 		current_node = ocif_node.to_godot_node(ocif_state.ocif_nodes)
 	ocif_state.godot_nodes[ocif_node.id] = current_node
-	# Add the node to any Godot groups / OCIF sets.
-	for set_name in ocif_state.ocif_node_sets:
-		for node_id in ocif_state.ocif_node_sets[set_name]:
+	# If the node is in any OCIF groups, add the node to Godot groups.
+	for group_name in ocif_state.ocif_node_groups:
+		for node_id in ocif_state.ocif_node_groups[group_name]:
 			if node_id == ocif_node.id:
-				current_node.add_to_group(set_name, true)
+				current_node.add_to_group(group_name, true)
 				break
 	# Add the node to the generated scene.
 	scene_parent.add_child(current_node)
@@ -192,10 +192,10 @@ func _export_convert_godot_scene_node(ocif_state: OCIFState, current_node: Node,
 	ocif_node.parent_id = parent_id
 	ocif_state.append_ocif_node(ocif_node)
 	ocif_state.godot_nodes[ocif_node.id] = current_node
-	# Is this node in any Godot groups (OCIF sets)?
+	# Is this node in any Godot groups? If so, add it to OCIF groups.
 	for group_name in current_node.get_groups():
 		if not group_name.begins_with("_"):
-			ocif_state.add_ocif_node_to_set(ocif_node, group_name)
+			ocif_state.add_ocif_node_to_group(ocif_node, group_name)
 	# Check if we need to create a parent/child relation.
 	if not parent_id.is_empty():
 		var relation := OCIFItem.new()
@@ -248,13 +248,13 @@ func _export_serialize_ocif_data(ocif_state: OCIFState) -> Dictionary:
 	var relations_json: Array = []
 	for ocif_relation in ocif_state.relations.values():
 		relations_json.append(ocif_relation.to_dictionary())
-	for ocif_set_name in ocif_state.ocif_node_sets:
+	for ocif_group_name in ocif_state.ocif_node_groups:
 		relations_json.append({
 			"data": [{
-				"members": ocif_state.ocif_node_sets[ocif_set_name],
-				"type": "@ocif/rel/set",
+				"members": ocif_state.ocif_node_groups[ocif_group_name],
+				"type": "@ocif/rel/group",
 			}],
-			"id": ocif_set_name,
+			"id": ocif_group_name,
 		})
 	if not relations_json.is_empty():
 		ocif_json["relations"] = relations_json

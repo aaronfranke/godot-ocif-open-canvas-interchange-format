@@ -5,7 +5,7 @@ extends Resource
 
 # OCIF data.
 var ocif_nodes: Dictionary[String, OCIFNode] = {}
-var ocif_node_sets: Dictionary[String, Array] = {} # Array[String]
+var ocif_node_groups: Dictionary[String, Array] = {} # Array[String]
 var relations: Dictionary[String, OCIFItem] = {}
 var resources: Dictionary[String, OCIFItem] = {}
 # Godot data.
@@ -19,11 +19,11 @@ var base_path: String = ""
 var unique_ids: Dictionary[String, bool] = {}
 
 
-func add_ocif_node_to_set(ocif_node: OCIFNode, set_name: String) -> void:
+func add_ocif_node_to_group(ocif_node: OCIFNode, group_name: String) -> void:
 	if not ocif_nodes.has(ocif_node.id):
-		push_warning("OCIF: Adding node '" + ocif_node.id + "' to a set, but is not in the list of nodes.")
-	var node_set: Array = ocif_node_sets.get_or_add(set_name, [])
-	node_set.append(ocif_node.id)
+		push_warning("OCIF: Adding node '" + ocif_node.id + "' to a group, but is not in the list of nodes.")
+	var node_group: Array = ocif_node_groups.get_or_add(group_name, [])
+	node_group.append(ocif_node.id)
 
 
 func append_ocif_node(ocif_node: OCIFNode) -> void:

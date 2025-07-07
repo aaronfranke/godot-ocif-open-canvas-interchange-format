@@ -94,7 +94,7 @@
 						"B",
 						"C"
 					],
-					"type": "@ocif/rel/set"
+					"type": "@ocif/rel/group"
 				}
 			],
 			"id": "letter_named_nodes"
