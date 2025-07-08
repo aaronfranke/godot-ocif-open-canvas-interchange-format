@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://wis41s3r64rt"]
+
+[ext_resource type="PackedScene" uid="uid://cug5yk5p7chwx" path="res://test/nested/godot_source/c.tscn" id="1_bi4w5"]
+
+[node name="A" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="B" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="C" parent="B" instance=ExtResource("1_bi4w5")]
+
+[editable path="B/C"]
+[editable path="B/C/D/E"]
+[editable path="B/C/D/F"]

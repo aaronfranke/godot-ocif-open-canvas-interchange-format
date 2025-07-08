@@ -1,10 +1,23 @@
 @tool
 class_name OCIFDocument
-extends RefCounted
+extends Resource
 
 
 static var _all_ocif_document_extensions: Array[OCIFDocumentExtension] = []
 var _active_ocif_document_extensions: Array[OCIFDocumentExtension] = []
+
+
+enum ExportNestedScenes {
+	## Allow nested OCIF files if a scene is purely referencing other Godot scenes, allowing for a deep hierarchy.
+	ALLOW_NESTED_FILES = 0,
+	## Merge the nested scenes into the main OCIF file, guaranteeing a single self-contained OCIF file (depth = 0).
+	MERGE_INTO_SINGLE_FILE = 1,
+	## Merge the nested scenes into one layer of leaf OCIF files, giving at most a flat hierarchy (depth = 0 or 1).
+	MERGE_INTO_FLAT_HIERARCHY = 2,
+}
+## The OCIF format usually has all nodes contained in one file (depth = 0) but also allows for a hierarchy of files (depth > 0).
+## This option only affects exporting. It controls how nested Godot scenes are exported to OCIF files.
+@export var export_nested_scenes: ExportNestedScenes = ExportNestedScenes.ALLOW_NESTED_FILES
 
 
 # Public functions: registering extensions and the 4 main import/export functions.
@@ -29,7 +42,7 @@ func import_append_from_file(ocif_state: OCIFState, file_path: String) -> Error:
 	return _import_parse_ocif_data(ocif_state, ocif_json)
 
 
-func import_generate_godot_scene(ocif_state: OCIFState) -> Node:
+func import_generate_godot_scene(ocif_state: OCIFState) -> CanvasItem:
 	# Generate nodes.
 	var root: CanvasItem
 	if ocif_state.ocif_nodes.has(ocif_state.root_node_id):
@@ -67,10 +80,15 @@ func export_append_from_godot_scene(ocif_state: OCIFState, scene_root: Node) -> 
 
 
 func export_write_to_filesystem(ocif_state: OCIFState, file_path: String) -> Error:
+	file_path = ProjectSettings.globalize_path(file_path)
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if file == null:
 		printerr("OCIF export: Failed to open the file for writing. File path: " + file_path)
 		return ERR_CANT_OPEN
+	ocif_state.base_path = file_path.get_base_dir()
+	ocif_state.filename = file_path.get_file()
+	_export_prepare_for_serialization(ocif_state)
+	# Actually export the OCIF data.
 	var ocif_json: Dictionary = _export_serialize_ocif_data(ocif_state)
 	var json_string: String = JSON.stringify(ocif_json, "\t")
 	file.store_string(json_string + "\n")
@@ -110,7 +128,15 @@ func _import_parse_resources(ocif_state: OCIFState, ocif_json: Dictionary) -> vo
 	var resources_json: Array = ocif_json["resources"]
 	for resource_json in resources_json:
 		var ocif_resource := OCIFItem.from_dictionary(resource_json)
+		for i in range(ocif_resource.ocif_data.size()):
+			# Parse OCIF representations which we have built-in support for.
+			var representation_dict: Dictionary = ocif_resource.ocif_data[i]
+			if OCIFNested.import_looks_like_ocif_nested(representation_dict):
+				var ocif_nested := OCIFNested.from_dictionary(ocif_state, representation_dict)
+				if ocif_nested != null:
+					ocif_resource.ocif_data[i] = ocif_nested
 		ocif_state.append_ocif_resource(ocif_resource)
+		# Extensions can also provide code for parsing resources.
 		for ext in _active_ocif_document_extensions:
 			ext.import_parse_ocif_resource(ocif_state, ocif_resource)
 
@@ -168,8 +194,21 @@ func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, sce
 		current_node = ext.import_generate_scene_node(ocif_state, ocif_node, scene_parent)
 		if current_node != null:
 			break
+	# If no extension generated the node directly, try using a resource representation.
+	if current_node == null and not ocif_node.resource.is_empty():
+		if not ocif_state.resources.has(ocif_node.resource):
+			printerr("OCIF import: Node '" + ocif_node.id + "' uses resource '" + ocif_node.resource + "' but it is not defined in the OCIF file.")
+		else:
+			var resource: OCIFItem = ocif_state.resources[ocif_node.resource]
+			for representation in resource.ocif_data:
+				if representation is OCIFDataExtension:
+					current_node = representation.generate_node(ocif_state)
+					if current_node != null:
+						ocif_node.apply_to_godot_node(ocif_state, current_node)
+						break
+	# If no extension or resource representation generated the node, use the default OCIFNode to Godot node conversion.
 	if current_node == null:
-		current_node = ocif_node.to_godot_node(ocif_state.ocif_nodes)
+		current_node = ocif_node.to_godot_node(ocif_state)
 	ocif_state.godot_nodes[ocif_node.id] = current_node
 	# If the node is in any OCIF groups, add the node to Godot groups.
 	for group_name in ocif_state.ocif_node_groups:
@@ -183,13 +222,21 @@ func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, sce
 	else:
 		# Add the node to the generated scene.
 		scene_parent.add_child(current_node)
-		current_node.propagate_call(&"set_owner", [scene_root], true)
+		_import_propagate_owner(current_node, scene_root)
 	# Check if any child nodes need to be generated.
 	if ocif_node.child_ids.size() > 0:
 		for child_id in ocif_node.child_ids:
 			var child_node: OCIFNode = ocif_state.ocif_nodes[child_id]
 			_import_generate_scene_node(ocif_state, child_node, current_node, scene_root)
 	return current_node
+
+
+func _import_propagate_owner(current_node: Node, scene_root: Node) -> void:
+	current_node.set_owner(scene_root)
+	if not current_node.scene_file_path.is_empty():
+		return
+	for child in current_node.get_children():
+		_import_propagate_owner(child, scene_root)
 
 
 func _import_modify_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode) -> void:
@@ -244,6 +291,17 @@ func _export_convert_godot_scene_node(ocif_state: OCIFState, current_node: Node,
 		if not is_zero_approx(rot_radians):
 			rel_node_ext["rotation"] = rad_to_deg(rot_radians)
 		ocif_node.ocif_data.append(rel_node_ext)
+	# Does this node need to be exported as a separate OCIF file?
+	if export_nested_scenes != ExportNestedScenes.MERGE_INTO_SINGLE_FILE:
+		if current_node != scene_root and not current_node.scene_file_path.is_empty():
+			# In this case, this is a nested scene which needs to go into its own OCIF file.
+			var ocif_nested_resource_id: String = _export_get_or_create_ocif_nested(ocif_state, current_node)
+			if ocif_nested_resource_id.is_empty():
+				return ERR_INVALID_DATA
+			ocif_node.resource = ocif_nested_resource_id
+			# Return here, don't run extension logic or act on child nodes. Those are handled by the nested OCIF file.
+			return OK
+	# By this point, we've determined that this node goes in the current OCIF file.
 	# Run convert scene node for extensions.
 	for ext in _active_ocif_document_extensions:
 		var error: Error = ext.export_convert_scene_node(ocif_state, ocif_node, current_node, scene_root)
@@ -257,6 +315,50 @@ func _export_convert_godot_scene_node(ocif_state: OCIFState, current_node: Node,
 	return OK
 
 
+func _export_get_or_create_ocif_nested(ocif_state: OCIFState, current_node: Node) -> String:
+	# We need an OCIFNested resource, but first, check if we already have one to avoid creating duplicates.
+	for resource in ocif_state.resources.values():
+		var repesentations: Array = resource.ocif_data
+		if repesentations.size() == 1 and repesentations[0] is OCIFNested:
+			var ocif_nested: OCIFNested = repesentations[0] as OCIFNested
+			if ocif_nested.source_file_path == current_node.scene_file_path:
+				# We already have an OCIFNested resource for this scene, so we can reuse it.
+				# But first... if we have two instances of the same OCIFNested, ensure its root node's ID is based on the file name.
+				var desired_root_id: String = current_node.scene_file_path.get_file().get_basename().capitalize()
+				if ocif_nested.nested_ocif_state.root_node_id != desired_root_id:
+					ocif_nested.export_change_root_node_id(desired_root_id)
+				return resource.id
+	# If we reach here, we need to create a new OCIFNested resource.
+	var ocif_nested := OCIFNested.new()
+	ocif_nested.export_set_source_file_path(ocif_state, current_node.scene_file_path)
+	if export_nested_scenes == ExportNestedScenes.MERGE_INTO_FLAT_HIERARCHY:
+		ocif_nested.nested_ocif_document.export_nested_scenes = ExportNestedScenes.MERGE_INTO_SINGLE_FILE
+	var err: Error = ocif_nested.export_append_from_godot_scene(current_node)
+	if err != OK:
+		printerr("OCIF export: Failed to convert nested scene from node '" + current_node.name + "'. Error: " + str(err))
+		return ""
+	# Append the resource containing the OCIFNested to the OCIFState. Don't use `append_ocif_resource` because we've already reserved the unique ID.
+	var ocif_nested_resource := OCIFItem.new()
+	var id: String = ocif_nested.resource_name
+	ocif_nested_resource.id = id
+	ocif_nested_resource.ocif_data = [ocif_nested]
+	ocif_state.resources[id] = ocif_nested_resource
+	ocif_state.export_needs_subfolder = true
+	return id
+
+
+func _export_prepare_for_serialization(ocif_state: OCIFState) -> Error:
+	if ocif_state.export_needs_subfolder:
+		# If we need a subfolder, create it.
+		var subfolder_path: String = ocif_state.base_path.path_join(ocif_state.filename.get_basename())
+		if not DirAccess.dir_exists_absolute(subfolder_path):
+			var err: Error = DirAccess.make_dir_absolute(subfolder_path)
+			if err != OK:
+				printerr("OCIF export: Failed to create subfolder for OCIF file at path: " + subfolder_path)
+				return err
+	return OK
+
+
 func _export_serialize_ocif_data(ocif_state: OCIFState) -> Dictionary:
 	var ocif_json: Dictionary = {
 		"ocif": "https://canvasprotocol.org/ocif/v0.6",
@@ -266,13 +368,13 @@ func _export_serialize_ocif_data(ocif_state: OCIFState) -> Dictionary:
 		ocif_json["rootNode"] = ocif_state.root_node_id
 	var nodes_json: Array[Dictionary] = []
 	for ocif_node in ocif_state.ocif_nodes.values():
-		nodes_json.append(ocif_node.to_dictionary())
+		nodes_json.append(ocif_node.to_dictionary(ocif_state))
 	if not nodes_json.is_empty():
 		ocif_json["nodes"] = nodes_json
 	# Serialize relations.
 	var relations_json: Array = []
 	for ocif_relation in ocif_state.relations.values():
-		relations_json.append(ocif_relation.to_dictionary())
+		relations_json.append(ocif_relation.to_dictionary(ocif_state))
 	for ocif_group_name in ocif_state.ocif_node_groups:
 		relations_json.append({
 			"data": [{
@@ -286,7 +388,7 @@ func _export_serialize_ocif_data(ocif_state: OCIFState) -> Dictionary:
 	# Serialize resources.
 	var resources_json: Array = []
 	for ocif_resource in ocif_state.resources.values():
-		resources_json.append(ocif_resource.to_dictionary("representations"))
+		resources_json.append(ocif_resource.to_dictionary(ocif_state, "representations"))
 	if not resources_json.is_empty():
 		ocif_json["resources"] = resources_json
 	# Run export post for extensions.

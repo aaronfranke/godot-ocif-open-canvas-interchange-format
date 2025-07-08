@@ -66,6 +66,9 @@ func _export_scene_as_ocif(file_path: String) -> void:
 		return
 	var ocif_doc := OCIFDocument.new()
 	var ocif_state := OCIFState.new()
+	# Prevent "something.ocif" from containing another OCIF file named "something.ocif" to avoid confusion.
+	ocif_state.unique_ids[file_path.get_file()] = true
+	# Actually export the scene to OCIF.
 	var err: Error = ocif_doc.export_append_from_godot_scene(ocif_state, scene_root)
 	if err != OK:
 		printerr("OCIF editor export: Error while running export_append_from_godot_scene")

@@ -21,12 +21,12 @@ extends OCIFItem
 @export var size: Vector2 = Vector2()
 
 
-func apply_to_godot_node(godot_node: Node, ocif_nodes: Dictionary[String, OCIFNode]) -> void:
+func apply_to_godot_node(ocif_state: OCIFState, godot_node: Node) -> void:
 	godot_node.name = id
 	if godot_node is CanvasItem:
 		godot_node.z_index = global_position.z
 		godot_node.visible = visible
-		var local_transform: Transform3D = get_local_transform(ocif_nodes)
+		var local_transform: Transform3D = get_local_transform(ocif_state.ocif_nodes)
 		if godot_node is Control or godot_node is Node2D:
 			godot_node.position = Vector2(local_transform.origin.x, local_transform.origin.y)
 			var scale_3d: Vector3 = local_transform.basis.get_scale()
@@ -40,19 +40,21 @@ static func from_godot_node(node: Node, scene_root: Node) -> OCIFNode:
 	var ret := OCIFNode.new()
 	ret.id = node.name
 	if node is CanvasItem:
-		ret.visible = node.visible
-		var global_transform: Transform3D = _node_scene_global_transform_3d(node, scene_root)
-		ret.global_position = global_transform.origin
-		ret.global_scale = global_transform.basis.get_scale()
-		ret.global_rotation_degrees = rad_to_deg(global_transform.basis.get_euler().z)
+		if node != scene_root:
+			# The scene root is always visible and not transformed relative to itself.
+			ret.visible = node.visible
+			var global_transform: Transform3D = _node_scene_global_transform_3d(node, scene_root)
+			ret.global_position = global_transform.origin
+			ret.global_scale = global_transform.basis.get_scale()
+			ret.global_rotation_degrees = rad_to_deg(global_transform.basis.get_euler().z)
 		if node is Control:
 			ret.size = node.size
 	return ret
 
 
-func to_godot_node(ocif_nodes: Dictionary[String, OCIFNode]) -> CanvasItem:
+func to_godot_node(ocif_state: OCIFState) -> CanvasItem:
 	var ret := Control.new()
-	apply_to_godot_node(ret, ocif_nodes)
+	apply_to_godot_node(ocif_state, ret)
 	return ret
 
 
@@ -92,9 +94,9 @@ static func from_dictionary(json: Dictionary) -> OCIFNode:
 	return ret
 
 
-func to_dictionary(data_key: String = "data") -> Dictionary:
+func to_dictionary(ocif_state: OCIFState, data_key: String = "data") -> Dictionary:
 	assert(data_key == "data", "OCIFNode's data key should be `data`.")
-	var ret: Dictionary = super.to_dictionary(data_key)
+	var ret: Dictionary = super.to_dictionary(ocif_state, data_key)
 	if resource != "":
 		ret["resource"] = resource
 	if not visible:

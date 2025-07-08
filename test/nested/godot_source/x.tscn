@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://j1g35luasb00"]
+
+[node name="X" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Y" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Z" type="Control" parent="Y"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0

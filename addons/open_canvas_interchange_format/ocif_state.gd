@@ -4,20 +4,25 @@ extends Resource
 
 
 # OCIF data.
-var ocif_nodes: Dictionary[String, OCIFNode] = {}
-var ocif_node_groups: Dictionary[String, Array] = {} # Array[String]
-var root_node_id: String = ""
-var relations: Dictionary[String, OCIFItem] = {}
-var resources: Dictionary[String, OCIFItem] = {}
+@export var ocif_nodes: Dictionary[String, OCIFNode] = {}
+@export var ocif_node_groups: Dictionary[String, Array] = {} # Array[String]
+@export var root_node_id: String = ""
+@export var relations: Dictionary[String, OCIFItem] = {}
+@export var resources: Dictionary[String, OCIFItem] = {}
 # Godot data.
-var additional_data: Dictionary[String, Variant] = {}
+@export var additional_data: Dictionary[String, Variant] = {}
 var godot_nodes: Dictionary[String, Node] = {}
 # Metadata.
-var filename: String = ""
+@export var filename: String = "":
+	set(value):
+		filename = value
+		resource_name = value
 ## The folder path associated with the OCIF data. This is used to find other files the OCIF file references, like images or binary buffers. This will be set during import when appending from a file, and will be set during export when writing to a file.
-var base_path: String = ""
+@export var base_path: String = ""
+# Export-only flag for determining if we need a subfolder or not.
+@export var export_needs_subfolder: bool = false
 # Use a Dictionary as a Set for unique IDs. The values are unused.
-var unique_ids: Dictionary[String, bool] = {}
+@export var unique_ids: Dictionary[String, bool] = {}
 
 
 func add_ocif_node_to_group(ocif_node: OCIFNode, group_name: String) -> void:

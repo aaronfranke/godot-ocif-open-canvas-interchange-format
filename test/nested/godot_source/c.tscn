@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://cug5yk5p7chwx"]
+
+[ext_resource type="PackedScene" uid="uid://j1g35luasb00" path="res://test/nested/godot_source/x.tscn" id="1_bedad"]
+
+[node name="C" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="D" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="E" parent="D" instance=ExtResource("1_bedad")]
+
+[node name="F" parent="D" instance=ExtResource("1_bedad")]
+
+[editable path="D/E"]
+[editable path="D/F"]

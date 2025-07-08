@@ -1,0 +1,15 @@
+[remap]
+
+importer="ocif.scene"
+type="PackedScene"
+uid="uid://dcjil3juckin8"
+path="res://.godot/imported/c.ocif-ac935726f10d63b257ff02f4b602e55a.scn"
+
+[deps]
+
+source_file="res://test/nested/ocif/a/c.ocif"
+dest_files=["res://.godot/imported/c.ocif-ac935726f10d63b257ff02f4b602e55a.scn"]
+
+[params]
+
+scene=true

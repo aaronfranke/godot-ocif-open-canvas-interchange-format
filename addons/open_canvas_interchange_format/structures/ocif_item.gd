@@ -16,7 +16,7 @@ extends Resource
 @export var ocif_data: Array = []
 
 
-func to_dictionary(data_key: String = "data") -> Dictionary:
+func to_dictionary(ocif_state: OCIFState, data_key: String = "data") -> Dictionary:
 	var ret: Dictionary = {
 		"id": id,
 	}
@@ -24,7 +24,7 @@ func to_dictionary(data_key: String = "data") -> Dictionary:
 		var json_data: Array = []
 		for data in ocif_data:
 			if data is OCIFDataExtension or data is OCIFItem:
-				json_data.append(data.to_dictionary())
+				json_data.append(data.to_dictionary(ocif_state))
 			else:
 				json_data.append(data)
 		ret[data_key] = json_data

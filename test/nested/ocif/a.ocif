@@ -1,0 +1,68 @@
+{
+	"nodes": [
+		{
+			"data": [
+				{
+					"type": "@ocif/node/anchored"
+				}
+			],
+			"id": "A",
+			"size": [
+				1152.0,
+				648.0
+			]
+		},
+		{
+			"id": "B",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"data": [
+				{
+					"source": "B",
+					"type": "@ocif/node/relative"
+				}
+			],
+			"id": "C",
+			"resource": "c.ocif",
+			"size": [
+				40.0,
+				40.0
+			]
+		}
+	],
+	"ocif": "https://canvasprotocol.org/ocif/v0.6",
+	"relations": [
+		{
+			"data": [
+				{
+					"child": "C",
+					"parent": "B",
+					"type": "@ocif/rel/parent-child"
+				}
+			],
+			"id": "B/C"
+		}
+	],
+	"resources": [
+		{
+			"id": "c.ocif",
+			"representations": [
+				{
+					"location": "a/c.ocif",
+					"mimeType": "application/ocif+json"
+				}
+			]
+		}
+	],
+	"rootNode": "A",
+	"schemas": [
+		{
+			"name": "@ocif/node/anchored",
+			"uri": "https://spec.canvasprotocol.org/v0.6/extensions/anchored-node.json"
+		}
+	]
+}

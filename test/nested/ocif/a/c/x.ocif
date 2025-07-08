@@ -1,0 +1,45 @@
+{
+	"nodes": [
+		{
+			"id": "X",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"id": "Y",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"data": [
+				{
+					"source": "Y",
+					"type": "@ocif/node/relative"
+				}
+			],
+			"id": "Z",
+			"size": [
+				40.0,
+				40.0
+			]
+		}
+	],
+	"ocif": "https://canvasprotocol.org/ocif/v0.6",
+	"relations": [
+		{
+			"data": [
+				{
+					"child": "Z",
+					"parent": "Y",
+					"type": "@ocif/rel/parent-child"
+				}
+			],
+			"id": "Y/Z"
+		}
+	],
+	"rootNode": "X"
+}

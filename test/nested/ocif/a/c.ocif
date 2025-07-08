@@ -1,0 +1,81 @@
+{
+	"nodes": [
+		{
+			"id": "C",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"id": "D",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"data": [
+				{
+					"source": "D",
+					"type": "@ocif/node/relative"
+				}
+			],
+			"id": "E",
+			"resource": "x.ocif",
+			"size": [
+				40.0,
+				40.0
+			]
+		},
+		{
+			"data": [
+				{
+					"source": "D",
+					"type": "@ocif/node/relative"
+				}
+			],
+			"id": "F",
+			"resource": "x.ocif",
+			"size": [
+				40.0,
+				40.0
+			]
+		}
+	],
+	"ocif": "https://canvasprotocol.org/ocif/v0.6",
+	"relations": [
+		{
+			"data": [
+				{
+					"child": "E",
+					"parent": "D",
+					"type": "@ocif/rel/parent-child"
+				}
+			],
+			"id": "D/E"
+		},
+		{
+			"data": [
+				{
+					"child": "F",
+					"parent": "D",
+					"type": "@ocif/rel/parent-child"
+				}
+			],
+			"id": "D/F"
+		}
+	],
+	"resources": [
+		{
+			"id": "x.ocif",
+			"representations": [
+				{
+					"location": "c/x.ocif",
+					"mimeType": "application/ocif+json"
+				}
+			]
+		}
+	],
+	"rootNode": "C"
+}

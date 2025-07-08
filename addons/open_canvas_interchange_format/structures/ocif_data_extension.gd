@@ -5,13 +5,15 @@ class_name OCIFDataExtension
 extends Resource
 
 
+func generate_node(ocif_state: OCIFState) -> CanvasItem:
+	return null
+
+
 func get_type() -> String:
-	printerr("OCIFDataExtension: The `get_type()` function must be overridden.")
-	assert(false)
 	return ""
 
 
-func to_dictionary() -> Dictionary:
+func to_dictionary(ocif_state: OCIFState) -> Dictionary:
 	printerr("OCIFDataExtension: The `to_dictionary()` function must be overridden.")
 	assert(false)
 	return {}
