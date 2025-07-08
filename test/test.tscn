@@ -3,6 +3,8 @@
 [node name="Test" type="Control"]
 layout_mode = 3
 anchors_preset = 0
+offset_right = 160.0
+offset_bottom = 90.0
 
 [node name="A" type="Control" parent="." groups=["letter_named_nodes"]]
 anchors_preset = 0

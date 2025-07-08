@@ -1,6 +1,13 @@
 {
 	"nodes": [
 		{
+			"id": "Test",
+			"size": [
+				160.0,
+				90.0
+			]
+		},
+		{
 			"id": "A",
 			"size": [
 				40.0,
@@ -68,7 +75,7 @@
 			]
 		}
 	],
-	"ocif": "https://canvasprotocol.org/ocif/v0.4",
+	"ocif": "https://canvasprotocol.org/ocif/v0.6",
 	"relations": [
 		{
 			"data": [
@@ -104,6 +111,7 @@
 			"id": "letter_named_nodes"
 		}
 	],
+	"rootNode": "Test",
 	"schemas": [
 		{
 			"name": "@ocif/node/anchored",

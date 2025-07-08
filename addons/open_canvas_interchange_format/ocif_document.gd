@@ -30,12 +30,19 @@ func import_append_from_file(ocif_state: OCIFState, file_path: String) -> Error:
 
 
 func import_generate_godot_scene(ocif_state: OCIFState) -> Node:
-	var root := Control.new()
-	root.name = ocif_state.filename.get_basename()
 	# Generate nodes.
-	for ocif_node in ocif_state.ocif_nodes.values():
-		if ocif_node.parent_id.is_empty():
-			_import_generate_scene_node(ocif_state, ocif_node, root, root)
+	var root: CanvasItem
+	if ocif_state.ocif_nodes.has(ocif_state.root_node_id):
+		# If the OCIF file has an explicit scene root node, use it.
+		var ocif_root_node: OCIFNode = ocif_state.ocif_nodes[ocif_state.root_node_id]
+		root = _import_generate_scene_node(ocif_state, ocif_root_node, null, null)
+	else:
+		# If this OCIF file does not have an explicit scene root node, create one implicitly.
+		root = Control.new()
+		root.name = ocif_state.filename.get_basename()
+		for ocif_node in ocif_state.ocif_nodes.values():
+			if ocif_node.parent_id.is_empty():
+				_import_generate_scene_node(ocif_state, ocif_node, root, root)
 	# Modify generated nodes.
 	for ocif_node in ocif_state.ocif_nodes.values():
 		_import_modify_scene_node(ocif_state, ocif_node)
@@ -48,9 +55,6 @@ func import_generate_godot_scene(ocif_state: OCIFState) -> Node:
 
 
 func export_append_from_godot_scene(ocif_state: OCIFState, scene_root: Node) -> Error:
-	var root_class_name: String = scene_root.get_class()
-	if root_class_name not in ["Node", "CanvasItem", "Node2D", "Control"]:
-		push_warning("OCIF export: Expected the root node to be a plain node. The root node will not be exported, so the data in your " + root_class_name + " root will not be included in the OCIF file.")
 	# Extension export preflight.
 	_active_ocif_document_extensions.clear()
 	for ext in _all_ocif_document_extensions:
@@ -96,6 +100,7 @@ func _import_parse_ocif_data(ocif_state: OCIFState, ocif_json: Dictionary) -> Er
 	_import_parse_resources(ocif_state, ocif_json)
 	_import_parse_nodes(ocif_state, ocif_json)
 	_import_parse_relations(ocif_state, ocif_json)
+	_import_resolve_implicit_relations(ocif_state)
 	return OK
 
 
@@ -111,6 +116,8 @@ func _import_parse_resources(ocif_state: OCIFState, ocif_json: Dictionary) -> vo
 
 
 func _import_parse_nodes(ocif_state: OCIFState, ocif_json: Dictionary) -> void:
+	if ocif_json.has("rootNode"):
+		ocif_state.root_node_id = ocif_json["rootNode"]
 	if not ocif_json.has("nodes"):
 		return
 	var nodes_json: Array = ocif_json["nodes"]
@@ -144,7 +151,17 @@ func _import_parse_relations(ocif_state: OCIFState, ocif_json: Dictionary) -> vo
 			ext.import_parse_ocif_relation(ocif_state, ocif_relation)
 
 
-func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, scene_parent: CanvasItem, scene_root: CanvasItem) -> void:
+func _import_resolve_implicit_relations(ocif_state: OCIFState) -> void:
+	# Nodes are implicitly parented to the scene root, so we need to set the parent ID for all nodes that do not have one.
+	if ocif_state.ocif_nodes.has(ocif_state.root_node_id):
+		var ocif_root_node: OCIFNode = ocif_state.ocif_nodes[ocif_state.root_node_id]
+		for ocif_node in ocif_state.ocif_nodes.values():
+			if ocif_node.parent_id.is_empty() and ocif_node.id != ocif_state.root_node_id:
+				ocif_node.parent_id = ocif_state.root_node_id
+				ocif_root_node.child_ids.append(ocif_node.id)
+
+
+func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, scene_parent: CanvasItem, scene_root: CanvasItem) -> CanvasItem:
 	# Generate a node, checking extensions first.
 	var current_node: CanvasItem = null
 	for ext in _active_ocif_document_extensions:
@@ -160,14 +177,19 @@ func _import_generate_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode, sce
 			if node_id == ocif_node.id:
 				current_node.add_to_group(group_name, true)
 				break
-	# Add the node to the generated scene.
-	scene_parent.add_child(current_node)
-	current_node.propagate_call(&"set_owner", [scene_root], true)
+	# Note: scene_parent and scene_root will both be null if this is the root node, otherwise both will be non-null.
+	if scene_parent == null:
+		scene_root = current_node
+	else:
+		# Add the node to the generated scene.
+		scene_parent.add_child(current_node)
+		current_node.propagate_call(&"set_owner", [scene_root], true)
 	# Check if any child nodes need to be generated.
 	if ocif_node.child_ids.size() > 0:
 		for child_id in ocif_node.child_ids:
 			var child_node: OCIFNode = ocif_state.ocif_nodes[child_id]
 			_import_generate_scene_node(ocif_state, child_node, current_node, scene_root)
+	return current_node
 
 
 func _import_modify_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode) -> void:
@@ -180,10 +202,10 @@ func _import_modify_scene_node(ocif_state: OCIFState, ocif_node: OCIFNode) -> vo
 
 # Export process.
 func _export_convert_godot_scene(ocif_state: OCIFState, scene_root: Node) -> Error:
-	for node in scene_root.get_children():
-		var error: Error = _export_convert_godot_scene_node(ocif_state, node, "", scene_root)
-		if error != OK:
-			return error
+	ocif_state.root_node_id = scene_root.name
+	var error: Error = _export_convert_godot_scene_node(ocif_state, scene_root, "", scene_root)
+	if error != OK:
+		return error
 	return OK
 
 
@@ -197,7 +219,8 @@ func _export_convert_godot_scene_node(ocif_state: OCIFState, current_node: Node,
 		if not group_name.begins_with("_"):
 			ocif_state.add_ocif_node_to_group(ocif_node, group_name)
 	# Check if we need to create a parent/child relation.
-	if not parent_id.is_empty():
+	# Most nodes are implicitly parented to the scene root, so this is only needed if the parent is not the scene root.
+	if not parent_id.is_empty() and parent_id != scene_root.name:
 		var relation := OCIFItem.new()
 		relation.id = parent_id + "/" + ocif_node.id
 		relation.ocif_data = [{
@@ -236,9 +259,11 @@ func _export_convert_godot_scene_node(ocif_state: OCIFState, current_node: Node,
 
 func _export_serialize_ocif_data(ocif_state: OCIFState) -> Dictionary:
 	var ocif_json: Dictionary = {
-		"ocif": "https://canvasprotocol.org/ocif/v0.4",
+		"ocif": "https://canvasprotocol.org/ocif/v0.6",
 	}
 	# Serialize nodes.
+	if not ocif_state.root_node_id.is_empty():
+		ocif_json["rootNode"] = ocif_state.root_node_id
 	var nodes_json: Array[Dictionary] = []
 	for ocif_node in ocif_state.ocif_nodes.values():
 		nodes_json.append(ocif_node.to_dictionary())

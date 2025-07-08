@@ -144,6 +144,8 @@ static func _node_local_transform_3d(current_node: CanvasItem) -> Transform3D:
 
 
 static func _node_scene_global_transform_3d(current_node: CanvasItem, scene_root: Node) -> Transform3D:
+	if current_node == scene_root:
+		return Transform3D.IDENTITY # The scene root cannot be transformed relative to itself.
 	var ret: Transform3D = _node_local_transform_3d(current_node)
 	var parent: Node = current_node.get_parent()
 	if parent != scene_root and parent is CanvasItem:

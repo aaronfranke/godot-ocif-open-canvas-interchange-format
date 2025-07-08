@@ -6,6 +6,7 @@ extends Resource
 # OCIF data.
 var ocif_nodes: Dictionary[String, OCIFNode] = {}
 var ocif_node_groups: Dictionary[String, Array] = {} # Array[String]
+var root_node_id: String = ""
 var relations: Dictionary[String, OCIFItem] = {}
 var resources: Dictionary[String, OCIFItem] = {}
 # Godot data.
