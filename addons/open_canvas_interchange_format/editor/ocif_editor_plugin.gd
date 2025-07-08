@@ -4,6 +4,7 @@ extends EditorPlugin
 
 
 var _file_dialog: EditorFileDialog
+var _import_plugin: EditorImportPluginOCIF
 
 
 func _enter_tree() -> void:
@@ -13,9 +14,9 @@ func _enter_tree() -> void:
 	OCIFDocument.register_ocif_document_extension(ext)
 	if not Engine.is_editor_hint():
 		return
-	# Set up the editor scene format importer. This is the only part of this file that is for editor importing.
-	var imp := EditorSceneFormatImporterOCIF.new()
-	add_scene_format_importer_plugin(imp)
+	# Set up the editor import plugin.
+	_import_plugin = EditorImportPluginOCIF.new()
+	add_import_plugin(_import_plugin, true)
 	# Set up the editor export file dialog.
 	_file_dialog = EditorFileDialog.new()
 	_file_dialog.set_file_mode(EditorFileDialog.FILE_MODE_SAVE_FILE)
@@ -37,6 +38,7 @@ func _exit_tree() -> void:
 	if not Engine.is_editor_hint():
 		return
 	_file_dialog.queue_free()
+	remove_import_plugin(_import_plugin)
 
 
 func _try_begin_ocif_editor_export() -> void:
